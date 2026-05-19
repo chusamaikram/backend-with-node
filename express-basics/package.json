@@ -1,0 +1,16 @@
+{
+    "name": "prjct1",
+    "version": "1.0.0",
+    "description": "starting point for my bacjend journey",
+    "license": "ISC",
+    "author": "usama ikram",
+    "type": "module",
+    "main": "index.js",
+    "scripts": {
+
+        "start": "node index.js"
+    },
+    "dependencies": {
+        "express": "^5.2.1"
+    }
+}
