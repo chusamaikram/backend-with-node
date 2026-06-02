@@ -12,12 +12,18 @@ const videoSchema = new Schema({
         required: true,
     },
     videoFile: {
-        type: String, //cloudinary url
+        type: {
+            url: String,
+            public_id: String
+        },
         required: true,
 
     },
     thumbnail: {
-        type: String, //cloudinary url
+        type: {
+            url: String,
+            public_id: String
+        },
         required: true,
     },
     duration: {

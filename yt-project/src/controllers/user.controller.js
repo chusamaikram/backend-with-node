@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
-import { uploadToCloudinary } from "../utils/Cloudinary.js"
+import { uploadToCloudinary, deleteOnCloudinary } from "../utils/Cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose";
@@ -291,10 +291,20 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Avatar file is missing")
     }
 
+    // get current user to extract old avatar public_id before overwriting
+    const currentUser = await User.findById(req.user?._id)
+
     const avatar = await uploadToCloudinary(localAvatar)
 
     if (!avatar.url) {
         throw new ApiError(400, "Error while uploading avatar")
+    }
+
+    // delete old avatar from cloudinary after new one is uploaded successfully
+    // extract public_id from url: https://res.cloudinary.com/<cloud>/image/upload/v123/<public_id>.jpg
+    if (currentUser.avatar) {
+        const oldAvatarPublicId = currentUser.avatar.split("/").pop().split(".")[0]
+        await deleteOnCloudinary(oldAvatarPublicId, "image")
     }
 
     const user = await User.findByIdAndUpdate(
@@ -321,10 +331,19 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Cover image is missing")
     }
 
+    // get current user to extract old cover image public_id before overwriting
+    const currentUser = await User.findById(req.user?._id)
+
     const coverImage = await uploadToCloudinary(localImage)
 
     if (!coverImage.url) {
         throw new ApiError(400, "Error while uploading Cover image")
+    }
+
+    // delete old cover image from cloudinary after new one is uploaded successfully
+    if (currentUser.coverImage) {
+        const oldCoverPublicId = currentUser.coverImage.split("/").pop().split(".")[0]
+        await deleteOnCloudinary(oldCoverPublicId, "image")
     }
 
     const user = await User.findByIdAndUpdate(
