@@ -260,7 +260,7 @@ const updateUserDetails = asyncHandler(async (req, res) => {
     if (!fullname || !email) {
         throw new ApiError(400, "All fields are required")
     }
-    const user = User.findByIdAndUpdate(
+    const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
             $set: {
@@ -269,7 +269,7 @@ const updateUserDetails = asyncHandler(async (req, res) => {
             }
         },
         {
-            new: true
+            returnDocument: 'after'  // same as , new : true
         }
     ).select("-password")
 
@@ -304,7 +304,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
                 avatar: avatar.url
             }
         },
-        { new: true }
+        { returnDocument: "after" }   // same as new : true but it is deprecated now. 
     ).select("-password")
 
     return res
@@ -334,7 +334,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
                 coverImage: coverImage.url
             }
         },
-        { new: true }
+        { returnDocument: 'after' }
     ).select("-password")
 
     return res
@@ -360,7 +360,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         },
         {
             $lookup: {
-                from: "suscriptions",
+                from: "subscriptions",
                 localField: "_id",
                 foreignField: "channel",
                 as: "Subscribers"
@@ -368,10 +368,10 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         },
         {
             $lookup: {
-                from: "suscriptions",
+                from: "subscriptions",
                 localField: "_id",
                 foreignField: "subscriber",
-                as: "SubscribedTo" // which i have subscribed
+                as: "SubscribedTo"
             }
         },
         {
@@ -384,7 +384,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                 },
                 isSubscribed: {
                     $cond: {
-                        if: { $in: [req.user?._id, "$Subscribers.subscriber"] },
+                        if: { $in: [new mongoose.Types.ObjectId(req.user?._id), "$Subscribers.subscriber"] },
                         then: true,
                         else: false
                     }
@@ -464,9 +464,9 @@ const getWatchHistory = asyncHandler(async (req, res) => {
         }
     ])
 
-    res.status(200)
+    return res.status(200)
         .json(
-            new ApiResponse(200, user[0].watchhistory, "watch history fetched successfully")
+            new ApiResponse(200, user[0].watchHistory, "watch history fetched successfully")
         )
 
 })
