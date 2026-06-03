@@ -118,9 +118,10 @@ const deleteTweet = asyncHandler(async (req, res) => {
 })
 
 const getUserTweets = asyncHandler(async (req, res) => {
-   
 
-    const tweets = await Tweet.aggregate([
+    const { page = 1, limit = 10 } = req.query
+
+    const aggregateTweets = Tweet.aggregate([
         {
             // Stage 1: filter tweets that belong to the requested user only
             $match: {
@@ -210,6 +211,16 @@ const getUserTweets = asyncHandler(async (req, res) => {
             },
         },
     ]);
+    const options = {
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10)
+    }
+
+    const tweets = await Tweet.aggregatePaginate(
+        aggregateTweets,
+        options
+
+    );
 
     return res
         .status(200)
