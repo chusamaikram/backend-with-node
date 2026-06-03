@@ -60,7 +60,7 @@ const getSubscribers = asyncHandler(async (req, res) => {
         throw new ApiError(400, "invalid channel id")
     }
 
-    const aggregateSubscribers = await Subscription.aggregate([
+    const aggregateSubscribers =  Subscription.aggregate([
         {
             $match: {
                 channel: new mongoose.Types.ObjectId(channelId)
@@ -129,12 +129,12 @@ const getSubscribers = asyncHandler(async (req, res) => {
         limit: parseInt(limit, 10),
     }
 
-    const subscribers = await Subscription.aggregatePaginate(
+    const subscribers =await Subscription.aggregatePaginate(
         aggregateSubscribers,
         options
     )
 
-    if (!channels) {
+    if (!subscribers) {
         throw new ApiError(400, "error while fetching subscribers")
     }
     return res
@@ -157,7 +157,7 @@ const getSubscribedChannel = asyncHandler(async (req, res) => {
         throw new ApiError(400, "invalid subscriber id")
     }
 
-    const aggregateSubscribedChannels = await Subscription.aggregate([
+    const aggregateSubscribedChannels = Subscription.aggregate([
         {
             $match: {
                 subscriber: new mongoose.Types.ObjectId(subscriberId)
@@ -218,7 +218,8 @@ const getSubscribedChannel = asyncHandler(async (req, res) => {
     const options = {
         page: parseInt(page, 10),
         limit: parseInt(limit, 10)
-    },
+    };
+
     const subscribedChannels = await Subscription.aggregatePaginate(
         aggregateSubscribedChannels,
         options
