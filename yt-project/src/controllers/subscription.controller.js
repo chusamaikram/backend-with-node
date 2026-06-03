@@ -50,6 +50,7 @@ const toggleSubscription = asyncHandler(async (req, res) => {
 
 const getSubscribers = asyncHandler(async (req, res) => {
     const { channelId } = req.params
+    const { page = 1, limit = 20 } = req.query
 
     if (!channelId) {
         throw new ApiError(400, "please provide channel id ")
@@ -59,7 +60,7 @@ const getSubscribers = asyncHandler(async (req, res) => {
         throw new ApiError(400, "invalid channel id")
     }
 
-    const channels = await Subscription.aggregate([
+    const aggregateSubscribers = await Subscription.aggregate([
         {
             $match: {
                 channel: new mongoose.Types.ObjectId(channelId)
@@ -123,16 +124,30 @@ const getSubscribers = asyncHandler(async (req, res) => {
         },
     ]);
 
+    const options = {
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10),
+    }
+
+    const subscribers = await Subscription.aggregatePaginate(
+        aggregateSubscribers,
+        options
+    )
+
+    if (!channels) {
+        throw new ApiError(400, "error while fetching subscribers")
+    }
     return res
         .status(200)
         .json(
-            new ApiResponse(200, channels, "subscribers fetched successfully")
+            new ApiResponse(200, subscribers, "subscribers fetched successfully")
         )
 })
 
 const getSubscribedChannel = asyncHandler(async (req, res) => {
 
     const { subscriberId } = req.params
+    const { page = 1, limit = 20 } = req.query
 
     if (!subscriberId) {
         throw new ApiError(400, "please provide subscriber id")
@@ -142,7 +157,7 @@ const getSubscribedChannel = asyncHandler(async (req, res) => {
         throw new ApiError(400, "invalid subscriber id")
     }
 
-    const subscribedChannels = await Subscription.aggregate([
+    const aggregateSubscribedChannels = await Subscription.aggregate([
         {
             $match: {
                 subscriber: new mongoose.Types.ObjectId(subscriberId)
@@ -199,6 +214,15 @@ const getSubscribedChannel = asyncHandler(async (req, res) => {
             },
         },
     ]);
+
+    const options = {
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10)
+    },
+    const subscribedChannels = await Subscription.aggregatePaginate(
+        aggregateSubscribedChannels,
+        options
+    )
 
     if (!subscribedChannels) {
         throw new ApiError(400, "error while fetching subcribed channels")
