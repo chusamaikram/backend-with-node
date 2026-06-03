@@ -194,14 +194,15 @@ const deleteComment = asyncHandler(async (req, res) => {
         commentId
     )
 
-    await Like.deleteMany({
-        comment: commentId,
-        likedBy: req.user?._id 
-    })
 
     if (!deletedComment) {
         throw new ApiError(500, "error while deleting comment")
     }
+
+    await Like.deleteMany({
+        comment: commentId,
+        likedBy: req.user?._id
+    })
 
     return res.status(200)
         .json(
