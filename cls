@@ -1,0 +1,43 @@
+ yt-project/.gitignore                              |    0
+ yt-project/.prettierignore                         |    7 [31m-[m
+ yt-project/.prettierrc                             |    7 [31m-[m
+ yt-project/CODEBASE.md                             |  466 [31m-----[m
+ yt-project/package-lock.json                       | 1806 [31m--------------------[m
+ yt-project/package.json                            |   32 [31m-[m
+ yt-project/public/temp/.gitkeep                    |    0
+ yt-project/src/app.js                              |   47 [31m-[m
+ yt-project/src/constants.js                        |    2 [31m-[m
+ yt-project/src/controllers/comment.controller.js   |  220 [31m---[m
+ yt-project/src/controllers/dashboard.controller.js |  149 [31m--[m
+ .../src/controllers/healthcheck.controller.js      |    8 [31m-[m
+ yt-project/src/controllers/like.controller.js      |  199 [31m---[m
+ yt-project/src/controllers/playlist.controller.js  |  253 [31m---[m
+ .../src/controllers/subscription.controller.js     |  244 [31m---[m
+ yt-project/src/controllers/tweet.controller.js     |  238 [31m---[m
+ yt-project/src/controllers/user.controller.js      |  506 [31m------[m
+ yt-project/src/controllers/video.controller.js     |  499 [31m------[m
+ yt-project/src/db/index.js                         |   16 [31m-[m
+ yt-project/src/index.js                            |   15 [31m-[m
+ yt-project/src/middlewares/auth.middleware.js      |   29 [31m-[m
+ yt-project/src/middlewares/multer.middleware.js    |   13 [31m-[m
+ yt-project/src/models/comment.model.js             |   24 [31m-[m
+ yt-project/src/models/like.model.js                |   23 [31m-[m
+ yt-project/src/models/playlist.model.js            |   29 [31m-[m
+ yt-project/src/models/subscription.model.js        |   21 [31m-[m
+ yt-project/src/models/tweet.model.js               |   19 [31m-[m
+ yt-project/src/models/user.model.js                |   86 [31m-[m
+ yt-project/src/models/video.model.js               |   49 [31m-[m
+ yt-project/src/routes/comment.routes.js            |   12 [31m-[m
+ yt-project/src/routes/dashboard.routes.js          |   12 [31m-[m
+ yt-project/src/routes/healthcheck.routes.js        |    8 [31m-[m
+ yt-project/src/routes/like.routes.js               |   13 [31m-[m
+ yt-project/src/routes/playlist.routes.js           |   19 [31m-[m
+ yt-project/src/routes/subscription.routes.js       |   13 [31m-[m
+ yt-project/src/routes/tweet.routes.js              |   14 [31m-[m
+ yt-project/src/routes/user.routes.js               |   44 [31m-[m
+ yt-project/src/routes/video.routes.js              |   32 [31m-[m
+ yt-project/src/utils/ApiError.js                   |   27 [31m-[m
+ yt-project/src/utils/ApiResponse.js                |   15 [31m-[m
+ yt-project/src/utils/Cloudinary.js                 |   45 [31m-[m
+ yt-project/src/utils/asyncHandler.js               |   31 [31m-[m
+ 42 files changed, 5292 deletions(-)
