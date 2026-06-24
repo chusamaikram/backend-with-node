@@ -1,14 +1,18 @@
 import { Router } from "express";
-import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { createTweet, deleteTweet, getUserTweets, updateTweet } from "../controllers/tweet.controller.js";
+import { verifyJWT, optionalVerifyJWT } from "../middlewares/auth.middleware.js";
+import { createTweet, deleteTweet, getAllTweets, getUserTweets, updateTweet } from "../controllers/tweet.controller.js";
 
 const router = Router()
-router.use(verifyJWT)
 
-router.route("/").get(getUserTweets)
-router.route("/create-tweet").post(createTweet)
+// Public — reading tweets doesn't require auth
+router.route("/").get(optionalVerifyJWT, getAllTweets)
+
+
+// Protected — mutations require auth
+router.route("/u/:uId").get(verifyJWT, getUserTweets)
+router.route("/create-tweet").post(verifyJWT, createTweet)
 router.route("/t/:tweetId")
-    .patch(updateTweet)
-    .delete(deleteTweet)
+    .patch(verifyJWT, updateTweet)
+    .delete(verifyJWT, deleteTweet)
 
 export default router

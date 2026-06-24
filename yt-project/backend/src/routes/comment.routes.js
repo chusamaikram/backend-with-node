@@ -1,12 +1,15 @@
 
 import { Router } from "express";
-import { verifyJWT } from "../middlewares/auth.middleware.js";
+import { verifyJWT, optionalVerifyJWT } from "../middlewares/auth.middleware.js";
 import { addComment, deleteComment, getVideoComment, updateComment } from "../controllers/comment.controller.js";
 
 const router = Router();
-router.use(verifyJWT);
 
-router.route("/:videoId").get(getVideoComment).post(addComment)
-router.route("/c/:commentId").patch(updateComment).delete(deleteComment)
+// Public — guests can read comments
+router.route("/:videoId").get(optionalVerifyJWT, getVideoComment)
+
+// Protected — must be logged in to add/edit/delete
+router.route("/:videoId").post(verifyJWT, addComment)
+router.route("/c/:commentId").patch(verifyJWT, updateComment).delete(verifyJWT, deleteComment)
 
 export default router;

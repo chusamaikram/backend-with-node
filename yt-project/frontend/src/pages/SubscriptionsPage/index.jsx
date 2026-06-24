@@ -1,32 +1,39 @@
 import Container from "@/layouts/Container";
 import ChannelCard from "./ChannelCard";
-import VideoCard from "@/components/video/VideoCard";
-import { MOCK_CHANNELS, MOCK_VIDEOS } from "@/data/mockData";
+import { ChannelCardSkeleton } from "@/components/skeletons";
+import useSubscriptions from "@/hooks/useSubscriptions";
 
 function SubscriptionsPage() {
-  return (
-    <Container as="section" className="py-6 space-y-8">
-      {/* Subscribed Channels */}
-      <section>
-        <h1 className="text-xl font-semibold text-text-primary mb-4">Subscribed Channels</h1>
-        <ul role="list" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-          {MOCK_CHANNELS.map((ch) => (
-            <li key={ch._id}><ChannelCard channel={ch} /></li>
-          ))}
-        </ul>
-      </section>
+    const { channels, loading, error, handleToggle } = useSubscriptions();
 
-      {/* Latest videos */}
-      <section>
-        <h2 className="text-lg font-semibold text-text-primary mb-4">Latest from Subscriptions</h2>
-        <ul role="list" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {MOCK_VIDEOS.slice(0, 8).map((v) => (
-            <li key={v._id}><VideoCard video={v} /></li>
-          ))}
-        </ul>
-      </section>
-    </Container>
-  );
+    return (
+        <Container as="section" className="py-6 space-y-6">
+            <h1 className="text-xl font-semibold text-text-primary">Subscribed Channels</h1>
+
+            {loading ? (
+                <ChannelCardSkeleton count={8} />
+            ) : error ? (
+                <p className="text-error text-sm">{error}</p>
+            ) : channels.length === 0 ? (
+                <div className="flex flex-col items-center py-24 text-center">
+                    <p className="text-5xl mb-4">📺</p>
+                    <p className="text-lg font-medium text-text-primary">No subscriptions yet</p>
+                    <p className="text-sm text-text-muted mt-1">Subscribe to channels to see them here.</p>
+                </div>
+            ) : (
+                <ul
+                    role="list"
+                    className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4"
+                >
+                    {channels.map((ch) => (
+                        <li key={ch._id}>
+                            <ChannelCard channel={ch} onToggle={handleToggle} />
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </Container>
+    );
 }
 
 export default SubscriptionsPage;

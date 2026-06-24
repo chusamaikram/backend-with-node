@@ -1,11 +1,7 @@
 import api from "../axiosinstance";
-import {
-    API_ENDPOINTS
-} from "../endpoints";
+import { API_ENDPOINTS } from "../endpoints";
 
-/**
- * Video service
- */
+
 
 /**
  * @param {{ page?: number, limit?: number, query?: string, sortBy?: string, sortType?: string, userId?: string }} params
@@ -20,8 +16,10 @@ export const getAllVideos = async (params = {}) => {
 /**
  * @param {string} videoId
  */
-export const getVideoById = async (videoId) => {
-    const response = await api.get(API_ENDPOINTS.VIDEO.GET_BY_ID(videoId));
+export const getVideoById = async (videoId, countView = true) => {
+    const response = await api.get(API_ENDPOINTS.VIDEO.GET_BY_ID(videoId), {
+        params: { countView }
+    });
     return response.data;
 };
 

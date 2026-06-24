@@ -1,60 +1,205 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import Container from "@/layouts/Container";
 import ChannelHeader from "./ChannelHeader";
 import ChannelTabs from "./ChannelTabs";
-import { MOCK_USER, MOCK_VIDEOS, MOCK_PLAYLISTS, MOCK_TWEETS } from "@/data/mockData";
-import VideoCard from "@/components/video/VideoCard";
+import VideoGrid from "@/pages/HomePage/VideoGrid";
+import { VideoGridSkeleton, PlaylistCardSkeleton } from "@/components/skeletons";
+import PlaylistCard from "@/pages/PlaylistsPage/PlaylistCard";
+import useChannelProfile from "@/hooks/useChannelProfile";
+import { getAllVideos } from "@/api/services/video.service";
+import { getUserPlaylists } from "@/api/services/playlist.service";
+import { getUserTweets } from "@/api/services/tweet.service";
+import useAuthStore from "@/store/authStore";
 import { formatDate } from "@/utils/formatDate";
 
+/**
+ * ChannelPage — public channel profile with lazy-loaded tabs.
+ *
+ * Lazy tab loading — why and how:
+ *   We don't fetch all 3 tabs on mount — that would be 3 API calls for data
+ *   the user may never see. Instead we track which tabs have been "activated"
+ *   using a Set stored in a ref. When a tab is first clicked, we fetch its data
+ *   and mark it as loaded. Subsequent clicks just show the cached state.
+ *
+ * Why useRef for loadedTabs instead of useState?
+ *   We don't need a re-render when a tab is marked as loaded — we just need
+ *   to remember the fact. useRef is the right tool for mutable values that
+ *   don't drive rendering.
+ */
 function ChannelPage() {
-  const { username } = useParams();
-  const [activeTab, setActiveTab] = useState("Videos");
+    const { username } = useParams();
+    const [activeTab, setActiveTab] = useState("Videos");
 
-  // Use mock user; in Sprint 4 fetch by username
-  const channel = { ...MOCK_USER, username: username ?? MOCK_USER.username };
-  const channelVideos = MOCK_VIDEOS.filter((v) => v.owner.username === MOCK_USER.username);
+    const { user } = useAuthStore();
+    const isOwner = user?.username === username;
 
-  return (
-    <Container as="section" className="py-6 space-y-6">
-      <ChannelHeader channel={channel} />
-      <ChannelTabs active={activeTab} onChange={setActiveTab} />
+    const {
+        channel,
+        loading: channelLoading,
+        error,
+        isSubscribed,
+        subscribersCount,
+        handleSubscribe,
+    } = useChannelProfile(username);
 
-      {/* Tab content */}
-      <div className="pt-2">
-        {activeTab === "Videos" && (
-          <ul role="list" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {channelVideos.map((v) => (
-              <li key={v._id}><VideoCard video={v} /></li>
+    // ── Tab data state ────────────────────────────────────────────────────
+    const [videos, setVideos]         = useState([]);
+    const [playlists, setPlaylists]   = useState([]);
+    const [tweets, setTweets]         = useState([]);
+    const [tabLoading, setTabLoading] = useState(false);
+
+    // Track which tabs have already been fetched — no re-fetching on tab switch
+    const loadedTabs = useRef(new Set());
+
+    // ── Fetch tab data when channel is loaded and tab changes ─────────────
+    useEffect(() => {
+        if (!channel?._id || loadedTabs.current.has(activeTab)) return;
+
+        const fetchTab = async () => {
+            setTabLoading(true);
+            try {
+                if (activeTab === "Videos") {
+                    const res = await getAllVideos({ userId: channel._id, limit: 12 });
+                    setVideos(res.data.docs ?? []);
+                }
+                if (activeTab === "Playlists") {
+                    const res = await getUserPlaylists(channel._id);
+                    setPlaylists(res.data.docs ?? []);
+                }
+                if (activeTab === "Tweets") {
+                    const res = await getUserTweets(channel._id, { limit: 10 });
+                    setTweets(res.data.docs ?? []);
+                }
+                // Mark this tab as loaded so we don't re-fetch on next switch
+                loadedTabs.current.add(activeTab);
+            } catch {
+                // Tab fetch failed silently — show empty state
+            } finally {
+                setTabLoading(false);
+            }
+        };
+
+        fetchTab();
+    }, [activeTab, channel?._id]);
+
+    // ── Error state ───────────────────────────────────────────────────────
+    if (error) {
+        return (
+            <Container className="py-24 text-center">
+                <p className="text-5xl mb-4">😕</p>
+                <p className="text-lg font-medium text-text-primary">Channel not found</p>
+                <p className="text-sm text-text-muted mt-1">{error}</p>
+            </Container>
+        );
+    }
+
+    return (
+        <Container as="section" className="py-6 space-y-6">
+
+            <ChannelHeader
+                channel={channel}
+                loading={channelLoading}
+                isSubscribed={isSubscribed}
+                subscribersCount={subscribersCount}
+                onSubscribe={handleSubscribe}
+                isOwner={isOwner}
+            />
+
+            {/* Only render tabs once channel data is loaded */}
+            {!channelLoading && channel && (
+                <>
+                    <ChannelTabs active={activeTab} onChange={setActiveTab} />
+
+                    <div className="pt-2">
+
+                        {/* Videos tab */}
+                        {activeTab === "Videos" && (
+                            tabLoading ? (
+                                <VideoGridSkeleton count={8} />
+                            ) : videos.length === 0 ? (
+                                <EmptyTab message="No videos uploaded yet." />
+                            ) : (
+                                <VideoGrid videos={videos} />
+                            )
+                        )}
+
+                        {/* Playlists tab */}
+                        {activeTab === "Playlists" && (
+                            tabLoading ? (
+                                <PlaylistCardSkeleton count={6} />
+                            ) : playlists.length === 0 ? (
+                                <EmptyTab message="No playlists yet." />
+                            ) : (
+                                <ul
+                                    role="list"
+                                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
+                                >
+                                    {playlists.map((pl) => (
+                                        <li key={pl._id}>
+                                            <PlaylistCard playlist={pl} />
+                                        </li>
+                                    ))}
+                                </ul>
+                            )
+                        )}
+
+                        {/* Tweets tab */}
+                        {activeTab === "Tweets" && (
+                            tabLoading ? (
+                                <TweetsSkeleton />
+                            ) : tweets.length === 0 ? (
+                                <EmptyTab message="No tweets yet." />
+                            ) : (
+                                <ul role="list" className="space-y-4 max-w-2xl">
+                                    {tweets.map((tweet) => (
+                                        <li
+                                            key={tweet._id}
+                                            className="bg-bg-elevated rounded-xl p-4 space-y-2"
+                                        >
+                                            <p className="text-sm text-text-primary leading-relaxed">
+                                                {tweet.content}
+                                            </p>
+                                            <p className="text-xs text-text-muted">
+                                                {formatDate(tweet.createdAt)}
+                                                &nbsp;&middot;&nbsp;
+                                                ❤ {tweet.likesCount}
+                                            </p>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )
+                        )}
+
+                    </div>
+                </>
+            )}
+        </Container>
+    );
+}
+
+/* ── Small reusable pieces ───────────────────────────────────────────── */
+function EmptyTab({ message }) {
+    return (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+            <p className="text-4xl mb-3">📭</p>
+            <p className="text-sm text-text-muted">{message}</p>
+        </div>
+    );
+}
+
+function TweetsSkeleton() {
+    return (
+        <ul className="space-y-4 max-w-2xl">
+            {Array.from({ length: 4 }, (_, i) => (
+                <li key={i} className="bg-bg-elevated rounded-xl p-4 space-y-2 animate-pulse">
+                    <div className="h-4 bg-bg-border rounded w-full" />
+                    <div className="h-4 bg-bg-border rounded w-3/4" />
+                    <div className="h-3 bg-bg-border rounded w-24 mt-1" />
+                </li>
             ))}
-          </ul>
-        )}
-
-        {activeTab === "Playlists" && (
-          <ul role="list" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {MOCK_PLAYLISTS.map((pl) => (
-              <li key={pl._id} className="rounded-xl bg-bg-elevated p-4 space-y-2">
-                <img src={pl.thumbnail.url} alt={pl.name} className="w-full aspect-video object-cover rounded-lg" />
-                <p className="font-medium text-text-primary text-sm">{pl.name}</p>
-                <p className="text-xs text-text-muted">{pl.videosCount} videos</p>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {activeTab === "Tweets" && (
-          <ul role="list" className="space-y-4 max-w-2xl">
-            {MOCK_TWEETS.map((t) => (
-              <li key={t._id} className="bg-bg-elevated rounded-xl p-4 space-y-2">
-                <p className="text-sm text-text-primary leading-relaxed">{t.content}</p>
-                <p className="text-xs text-text-muted">{formatDate(t.createdAt)} &middot; ❤ {t.likesCount}</p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </Container>
-  );
+        </ul>
+    );
 }
 
 export default ChannelPage;

@@ -7,8 +7,20 @@ import {
  * Tweet service
  */
 
-export const getUserTweets = async () => {
-    const response = await api.get(API_ENDPOINTS.TWEET.GET_ALL);
+/**
+ * @param {{ page?: number, limit?: number }} params
+ */
+export const getAllTweets = async (params = {}) => {
+    const response = await api.get(API_ENDPOINTS.TWEET.GET_ALL, { params });
+    return response.data;
+};
+
+/**
+ * @param {string} userId
+ * @param {{ page?: number, limit?: number }} params
+ */
+export const getUserTweets = async (userId, params = {}) => {
+    const response = await api.get(API_ENDPOINTS.TWEET.GET_USER(userId), { params });
     return response.data;
 };
 

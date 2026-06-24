@@ -77,10 +77,11 @@ export const API_ENDPOINTS = {
     // ─── Tweets ──────────────────────────────────────────────────────────
     TWEET: {
         // Static
-        GET_ALL: "/tweets", // GET  → current user's tweets
-        CREATE: "/tweets/create-tweet", // POST { content }
+        GET_ALL: "/tweets",              // GET  → all tweets (public)
+        GET_USER: (userId) => `/tweets/u/${userId}`, // GET  → specific user's tweets
+        CREATE: "/tweets/create-tweet",  // POST { content }
 
-        // Dynamic — UPDATE and DELETE share the same path, differentiated by HTTP method
+        // Dynamic
         UPDATE: (tweetId) => `/tweets/t/${tweetId}`, // PATCH  { content }
         DELETE: (tweetId) => `/tweets/t/${tweetId}`, // DELETE
     },

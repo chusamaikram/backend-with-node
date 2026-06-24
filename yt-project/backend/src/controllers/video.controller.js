@@ -200,17 +200,11 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
 const getVideoById = asyncHandler(async (req, res) => {
 
-    // get videoId from url params
     const { videoId } = req.params
+    const { countView } = req.query
 
-    // validate videoId is a proper MongoDB ObjectId
     if (!isValidObjectId(videoId)) {
         throw new ApiError(400, "Invalid videoId")
-    }
-
-    // validate logged in user id
-    if (!isValidObjectId(req.user?._id)) {
-        throw new ApiError(400, "Invalid userId")
     }
 
     const video = await Video.aggregate([
@@ -245,27 +239,28 @@ const getVideoById = asyncHandler(async (req, res) => {
                             subscribersCount: {
                                 $size: "$subscribers"
                             },
-                            // check if the logged in user is subscribed to this channel
-                            // must use ObjectId for correct $in comparison in aggregation
-                            isSubscribed: {
+                            // guests have no _id so isSubscribed is always false
+                            // only compute $in check when req.user exists
+                            isSubscribed: req.user?._id ? {
                                 $cond: {
                                     if: {
                                         $in: [
-                                            new mongoose.Types.ObjectId(req.user?._id),
+                                            new mongoose.Types.ObjectId(req.user._id),
                                             "$subscribers.subscriber"
                                         ]
                                     },
                                     then: true,
                                     else: false
                                 }
-                            }
+                            } : false
                         }
                     },
                     // only return needed fields from owner
                     {
                         $project: {
                             username: 1,
-                            avatar: 1,       // avatar is a plain string url in user.model.js
+                            fullname: 1,
+                            avatar: 1,
                             subscribersCount: 1,
                             isSubscribed: 1
                         }
@@ -306,18 +301,20 @@ const getVideoById = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Video not found")
     }
 
-    // increment views by 1 every time this video is fetched
-    // $inc adds 1 to the existing views value — from model views field
-    await Video.findByIdAndUpdate(videoId, {
-        $inc: { views: 1 }
-    })
+    if (req.user?._id) {
+        const result = await User.updateOne(
+            { _id: req.user._id },
+            { $addToSet: { watchhistory: videoId } }
+        )
 
-    // add this video to the logged in user's watch history
-    // $addToSet adds videoId only if it doesn't already exist (no duplicates)
-    // watchhistory matches exact field name in user.model.js
-    await User.findByIdAndUpdate(req.user?._id, {
-        $addToSet: { watchhistory: videoId }
-    })
+        // only increment if frontend says to count this view
+        if (countView === "true" && result.nModified > 0) {
+            await Video.findByIdAndUpdate(videoId, { $inc: { views: 1 } })
+        }
+    } else if (countView === "true") {
+        // guest — increment only when countView is true
+        await Video.findByIdAndUpdate(videoId, { $inc: { views: 1 } })
+    }
 
     return res
         .status(200)

@@ -6,6 +6,80 @@ import { Tweet } from "../models/tweet.model.js"
 import mongoose, { isValidObjectId } from "mongoose"
 import { Like } from "../models/like.model.js";
 
+const getAllTweets = asyncHandler(async (req, res) => {
+    const { page = 1, limit = 10 } = req.query
+
+    const aggregateTweets = Tweet.aggregate([
+        {
+            // No $match — fetch all tweets from all users
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "ownerDetails",
+                pipeline: [
+                    {
+                        $project: {
+                            username: 1,
+                            fullname: 1,
+                            avatar: 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $lookup: {
+                from: "likes",
+                localField: "_id",
+                foreignField: "tweet",
+                as: "likes",
+                pipeline: [
+                    {
+                        $project: { likedBy: 1 }
+                    }
+                ]
+            }
+        },
+        {
+            $addFields: {
+                likesCount: { $size: "$likes" },
+                ownerDetails: { $first: "$ownerDetails" },
+                isLiked: req.user?._id ? {
+                    $cond: {
+                        if: { $in: [req.user._id, "$likes.likedBy"] },
+                        then: true,
+                        else: false
+                    }
+                } : false
+            }
+        },
+        {
+            $sort: { createdAt: -1 }
+        },
+        {
+            $project: {
+                content: 1,
+                createdAt: 1,
+                likesCount: 1,
+                ownerDetails: 1,
+                isLiked: 1
+            }
+        }
+    ])
+
+    const options = {
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10)
+    }
+
+    const tweets = await Tweet.aggregatePaginate(aggregateTweets, options)
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, tweets, "All tweets fetched successfully"))
+})
+
 const createTweet = asyncHandler(async (req, res) => {
 
     const { content } = req.body
@@ -120,13 +194,19 @@ const deleteTweet = asyncHandler(async (req, res) => {
 const getUserTweets = asyncHandler(async (req, res) => {
 
     const { page = 1, limit = 10 } = req.query
+    const { uId } = req.params
+
+    // uId from params (channel page) or fall back to logged-in user
+    const targetUserId = uId ?? req.user?._id
+
+    if (!targetUserId) {
+        throw new ApiError(400, "userId is required")
+    }
 
     const aggregateTweets = Tweet.aggregate([
         {
-            // Stage 1: filter tweets that belong to the requested user only
             $match: {
-                owner: new mongoose.Types.ObjectId(req.user?._id)
-
+                owner: new mongoose.Types.ObjectId(targetUserId)
             }
         },
         {
@@ -143,7 +223,7 @@ const getUserTweets = asyncHandler(async (req, res) => {
                         // only return these fields from the user document
                         $project: {
                             username: 1,
-                            "avatar.url": 1,
+                            avatar: 1,
                             fullname: 1
                         },
                     },
@@ -183,13 +263,13 @@ const getUserTweets = asyncHandler(async (req, res) => {
                 },
                 // check if the logged-in user's _id exists inside likes.likedBy array
                 // $in returns true/false → used with $cond to set isLiked boolean
-                isLiked: {
+                isLiked: req.user?._id ? {
                     $cond: {
                         if: { $in: [req.user._id, "$likes.likedBy"] },
                         then: true,
                         else: false
                     },
-                },
+                } : false,
             },
         },
         {
@@ -234,5 +314,6 @@ export {
     createTweet,
     updateTweet,
     deleteTweet,
-    getUserTweets
+    getUserTweets,
+    getAllTweets
 }

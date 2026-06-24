@@ -1,7 +1,7 @@
 import { Router } from "express"
 import { loginUser, logoutUser, registerUser, refreshAccessToken, changeCurrentPassword, getCurrentUser, updateUserDetails, updateUserAvatar, updateUserCoverImage, getUserChannelProfile, getWatchHistory } from "../controllers/user.controller.js"
 import { upload } from "../middlewares/multer.middleware.js"
-import { verifyJWT } from "../middlewares/auth.middleware.js"
+import { verifyJWT, optionalVerifyJWT } from "../middlewares/auth.middleware.js"
 
 const router = Router()
 router.route("/register").post(
@@ -36,7 +36,7 @@ router.route("/avatar").patch(verifyJWT,
 router.route("/cover-image").patch(verifyJWT,
     upload.single("coverImage"), updateUserCoverImage)
 
-router.route("/c/:username").get(verifyJWT, getUserChannelProfile)
+router.route("/c/:username").get(optionalVerifyJWT, getUserChannelProfile)
 
 router.route("/watch-history").get(verifyJWT, getWatchHistory)
 

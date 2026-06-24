@@ -69,8 +69,13 @@ api.interceptors.response.use(
             return api(originalRequest);
         } catch (refreshError) {
             processQueue(refreshError, null);
-            useAuthStore.getState().clearUser();
-            window.location.href = "/login";
+            // Only redirect to login if the user was actually logged in.
+            // For guests, a failed refresh just means no session — don't redirect.
+            const { isLoggedIn } = useAuthStore.getState();
+            if (isLoggedIn) {
+                useAuthStore.getState().clearUser();
+                window.location.href = "/login";
+            }
             return Promise.reject(refreshError);
         } finally {
             isRefreshing = false;
