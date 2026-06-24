@@ -7,8 +7,9 @@ const app = express()
 
 app.use(cors({
     origin: process.env.CLIENT_URL,
-    credentials: true
-
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
 }))
 
 app.use(express.json({
@@ -44,4 +45,6 @@ app.use("/api/v1/healthcheck", healthcheckRouter)
 app.use("/api/v1/dashboard", dashboardRouter)
 
 
-export { app }
+export {
+    app
+}

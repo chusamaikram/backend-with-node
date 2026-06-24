@@ -1,8 +1,15 @@
-import { asyncHandler } from "../utils/asyncHandler.js";
-import { ApiError } from "../utils/ApiError.js";
-import { User } from "../models/user.model.js";
-import { uploadToCloudinary, deleteOnCloudinary } from "../utils/Cloudinary.js"
-import { ApiResponse } from "../utils/ApiResponse.js"
+import { asyncHandler} from "../utils/asyncHandler.js";
+import { ApiError} from "../utils/ApiError.js";
+import {
+    User
+} from "../models/user.model.js";
+import {
+    uploadToCloudinary,
+    deleteOnCloudinary
+} from "../utils/Cloudinary.js"
+import {
+    ApiResponse
+} from "../utils/ApiResponse.js"
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose";
 
@@ -15,9 +22,14 @@ const generateAccessAndRefreshTokens = async (userId) => {
         const refreshToken = user.generateRefreshToken()
 
         user.refreshToken = refreshToken
-        await user.save({ validateBeforeSave: false })
+        await user.save({
+            validateBeforeSave: false
+        })
 
-        return { refreshToken, accessToken }
+        return {
+            refreshToken,
+            accessToken
+        }
 
     } catch (error) {
         throw new ApiError(500, "Something went wrong while generating referesh and access token")
@@ -29,7 +41,12 @@ const generateAccessAndRefreshTokens = async (userId) => {
 const registerUser = asyncHandler(async (req, res) => {
 
 
-    const { fullname, email, password, username, } = req.body
+    const {
+        fullname,
+        email,
+        password,
+        username,
+    } = req.body
 
     //validation
     if (
@@ -40,7 +57,11 @@ const registerUser = asyncHandler(async (req, res) => {
 
     // check if already exist
     const existedUser = await User.findOne({
-        $or: [{ email }, { username }]
+        $or: [{
+            email
+        }, {
+            username
+        }]
     })
 
     if (existedUser) {
@@ -86,19 +107,42 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new ApiError(500, "User registration failed")
     }
 
-    // return api response
+    // generate tokens so the user is immediately logged in after register
+    const {
+        accessToken,
+        refreshToken
+    } = await generateAccessAndRefreshTokens(createdUser._id)
+
+    const options = {
+        httpOnly: true,
+        secure: true,
+        sameSite: "strict",
+    }
+
+    // return same shape as loginUser so the frontend can handle both identically
     return res
         .status(201)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", refreshToken, options)
         .json(
-            new ApiResponse(201, createdUser, "User registered successfully")
+            new ApiResponse(201, {
+                    user: createdUser,
+                    accessToken,
+                    refreshToken
+                },
+                "User registered successfully"
+            )
         )
-}
-)
+})
 
 const loginUser = asyncHandler(async (req, res) => {
 
     // req body sy data nikalo 
-    const { username, email, password } = req.body
+    const {
+        username,
+        email,
+        password
+    } = req.body
 
     //chk for username
     if (!username && !email) {
@@ -107,7 +151,11 @@ const loginUser = asyncHandler(async (req, res) => {
 
     //find user in db 
     const user = await User.findOne({
-        $or: [{ username }, { email }]
+        $or: [{
+            username
+        }, {
+            email
+        }]
     })
 
     if (!user) {
@@ -124,7 +172,10 @@ const loginUser = asyncHandler(async (req, res) => {
 
     //generate access and refresh token
 
-    const { refreshToken, accessToken } = await generateAccessAndRefreshTokens(user._id)
+    const {
+        refreshToken,
+        accessToken
+    } = await generateAccessAndRefreshTokens(user._id)
 
 
     const loggedInUser = await User.findById(user._id).select("-password -refreshToken")
@@ -134,15 +185,15 @@ const loginUser = asyncHandler(async (req, res) => {
 
     const options = {
         httpOnly: true,
-        secure: true
+        secure: true,
+        sameSite: "strict",
     }
     return res
         .status(200)
         .cookie("accessToken", accessToken, options)
         .cookie("refreshToken", refreshToken, options)
         .json(
-            new ApiResponse(200,
-                {
+            new ApiResponse(200, {
                     user: loggedInUser,
                     accessToken,
                     refreshToken
@@ -154,19 +205,17 @@ const loginUser = asyncHandler(async (req, res) => {
 
 const logoutUser = asyncHandler(async (req, res) => {
 
-    await User.findByIdAndUpdate(req.user._id,
-        {
-            $set: {
-                refreshToken: undefined
-            }
-        },
-        {
-            new: true
+    await User.findByIdAndUpdate(req.user?._id, {
+        $set: {
+            refreshToken: undefined
         }
-    )
+    }, {
+        new: true
+    })
     const options = {
         httpOnly: true,
-        secure: true
+        secure: true,
+        sameSite: "strict",
     }
     return res.status(200)
         .clearCookie("accessToken", options)
@@ -196,11 +245,15 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
             throw new ApiError(401, "Refresh Token is Expired or Used")
         }
 
-        const { refreshToken, accessToken } = await generateAccessAndRefreshTokens(user._id)
+        const {
+            refreshToken,
+            accessToken
+        } = await generateAccessAndRefreshTokens(user._id)
 
         const options = {
             httpOnly: true,
-            secure: true
+            secure: true,
+            sameSite: "strict",
         }
 
         return res
@@ -209,13 +262,14 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
             .cookie("refreshToken", refreshToken, options)
             .json(
                 new ApiResponse(
-                    200,
-                    { accessToken, refreshToken },
+                    200, {
+                        accessToken,
+                        refreshToken
+                    },
                     "access token refreshed"
                 )
             )
-    }
-    catch (error) {
+    } catch (error) {
         throw new ApiError(401, error?.message || "Invalid refresh token")
 
     }
@@ -225,7 +279,10 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 })
 
 const changeCurrentPassword = asyncHandler(async (req, res) => {
-    const { oldPassword, newPassword } = req.body
+    const {
+        oldPassword,
+        newPassword
+    } = req.body
 
 
     const user = await User.findById(req.user?._id)
@@ -237,7 +294,9 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
     }
 
     user.password = newPassword
-    await user.save({ validateBeforeSave: false })
+    await user.save({
+        validateBeforeSave: false
+    })
 
     return res
         .status(200)
@@ -255,21 +314,22 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 })
 
 const updateUserDetails = asyncHandler(async (req, res) => {
-    const { fullname, email } = req.body
+    const {
+        fullname,
+        email
+    } = req.body
 
     if (!fullname || !email) {
         throw new ApiError(400, "All fields are required")
     }
     const user = await User.findByIdAndUpdate(
-        req.user?._id,
-        {
+        req.user?._id, {
             $set: {
                 fullname,
                 email,
             }
-        },
-        {
-            returnDocument: 'after'  // same as , new : true
+        }, {
+            returnDocument: 'after' // same as , new : true
         }
     ).select("-password")
 
@@ -308,13 +368,13 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     }
 
     const user = await User.findByIdAndUpdate(
-        req.user?._id,
-        {
+        req.user?._id, {
             $set: {
-                avatar: avatar.url
+                avatar: avatar?.url
             }
-        },
-        { returnDocument: "after" }   // same as new : true but it is deprecated now. 
+        }, {
+            returnDocument: "after"
+        } // same as new : true but it is deprecated now. 
     ).select("-password")
 
     return res
@@ -347,13 +407,13 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     }
 
     const user = await User.findByIdAndUpdate(
-        req.user?._id,
-        {
+        req.user?._id, {
             $set: {
                 coverImage: coverImage.url
             }
-        },
-        { returnDocument: 'after' }
+        }, {
+            returnDocument: 'after'
+        }
     ).select("-password")
 
     return res
@@ -365,14 +425,15 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
 
-    const { username } = req.params
+    const {
+        username
+    } = req.params
 
     if (!username?.trim()) {
         throw new ApiError(400, "username is missing")
     }
 
-    const channel = await User.aggregate([
-        {
+    const channel = await User.aggregate([{
             $match: {
                 username: username?.toLowerCase()
             }
@@ -403,7 +464,9 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                 },
                 isSubscribed: {
                     $cond: {
-                        if: { $in: [new mongoose.Types.ObjectId(req.user?._id), "$Subscribers.subscriber"] },
+                        if: {
+                            $in: [new mongoose.Types.ObjectId(req.user?._id), "$Subscribers.subscriber"]
+                        },
                         then: true,
                         else: false
                     }
@@ -438,10 +501,9 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 })
 
 const getWatchHistory = asyncHandler(async (req, res) => {
-    const user = await User.aggregate([
-        {
+    const user = await User.aggregate([{
             $match: {
-                _id: new mongoose.Types.ObjectId(req.user._id)
+                _id: new mongoose.Types.ObjectId(req.user?._id)
             }
         },
         {
@@ -450,22 +512,19 @@ const getWatchHistory = asyncHandler(async (req, res) => {
                 localField: "watchhistory",
                 foreignField: "_id",
                 as: "watchHistory",
-                pipeline: [
-                    {
+                pipeline: [{
                         $lookup: {
                             from: "users",
                             localField: "owner",
                             foreignField: "_id",
                             as: "owner",
-                            pipeline: [
-                                {
-                                    $project: {
-                                        fullname: 1,
-                                        username: 1,
-                                        avatar: 1
-                                    }
+                            pipeline: [{
+                                $project: {
+                                    fullname: 1,
+                                    username: 1,
+                                    avatar: 1
                                 }
-                            ]
+                            }]
                         }
                     },
                     {
@@ -503,4 +562,4 @@ export {
     updateUserCoverImage,
     getUserChannelProfile,
     getWatchHistory
-} 
+}
