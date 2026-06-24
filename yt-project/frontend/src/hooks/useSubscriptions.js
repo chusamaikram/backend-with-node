@@ -16,7 +16,12 @@ function useSubscriptions() {
             setLoading(true);
             try {
                 const res = await getSubscribedChannels(user._id);
-                setChannels(res.data ?? []);
+                // API returns paginated { docs } where each doc is { subscribedChannel: {...} }
+                const docs = res.data?.docs ?? [];
+                setChannels(docs.map((item) => ({
+                    ...item.subscribedChannel,
+                    isSubscribed: true, // already subscribed since they appear here
+                })));
             } catch (err) {
                 setError(err?.response?.data?.message ?? "Failed to load subscriptions.");
             } finally {

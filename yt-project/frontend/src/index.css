@@ -95,3 +95,60 @@ body {
     background-color: var(--color-bg-elevated);
     border-radius: 6px;
 }
+
+/* ── Upload border spin animation ───────────────────────────── */
+@keyframes border-spin {
+    to { --angle: 360deg; }
+}
+
+@keyframes progress-shimmer {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+}
+
+.dropzone-uploading {
+    position: relative;
+    border: 2px dashed transparent;
+    background-clip: padding-box;
+    animation: border-spin 1.5s linear infinite;
+    outline: 2px dashed var(--color-success);
+    outline-offset: -2px;
+    box-shadow: 0 0 12px 0 color-mix(in srgb, var(--color-success) 30%, transparent);
+}
+
+.progress-bar-fill {
+    background: linear-gradient(
+        90deg,
+        var(--color-success) 0%,
+        color-mix(in srgb, var(--color-success) 60%, white) 50%,
+        var(--color-success) 100%
+    );
+    background-size: 200% auto;
+    animation: progress-shimmer 1.5s linear infinite;
+}
+
+/* ── Page / content fade-in ─────────────────────────────── */
+@keyframes fade-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.page-enter {
+    animation: fade-in 0.2s ease-out both;
+}
+
+.content-enter {
+    animation: fade-in 0.25s ease-out both;
+}
+
+/* ── Like button pop ────────────────────────────────────── */
+@keyframes like-pop {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.25); }
+    70%  { transform: scale(0.95); }
+    100% { transform: scale(1); }
+}
+
+.like-pop {
+    animation: like-pop 0.35s ease-out;
+}

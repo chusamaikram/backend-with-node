@@ -16,7 +16,7 @@ const NAV_ITEMS = [
   { type: "divider" },
   { label: "Liked Videos",   href: "/liked",         icon: Heart      },
   { label: "Watch History",  href: "/history",       icon: Clock      },
-  { label: "Your Tweets",    href: "/tweets",        icon: Feather    },
+  { label: "Tweets",        href: "/tweets",        icon: Feather    },
   { label: "Playlists",      href: "/playlists",     icon: ListVideo  },
   { type: "divider" },
   { label: "Dashboard",      href: "/dashboard",     icon: BarChart2  },

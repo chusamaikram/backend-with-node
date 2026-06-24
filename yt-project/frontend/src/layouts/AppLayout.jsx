@@ -1,5 +1,5 @@
 import { Outlet, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
@@ -8,19 +8,10 @@ import { cn } from "@/utils/cn";
 
 const NO_SIDEBAR = ["/login", "/register"];
 
-/**
- * AppLayout — root shell.
- *
- *  ┌─────────────────────────────────┐
- *  │  Navbar  (fixed h-14)           │
- *  ├──────────┬──────────────────────┤
- *  │ Sidebar  │  <Outlet />          │
- *  │ (fixed)  │  (scrollable, pt-14) │
- *  └──────────┴──────────────────────┘
- */
 function AppLayout() {
   const { pathname } = useLocation();
   const { sidebarOpen, setSidebarOpen } = useUiStore();
+  const mainRef = useRef(null);
 
   const showSidebar = !NO_SIDEBAR.includes(pathname);
 
@@ -29,6 +20,15 @@ function AppLayout() {
     if (window.innerWidth < 1024) setSidebarOpen(false);
   }, [pathname, setSidebarOpen]);
 
+  /* Page transition — re-trigger fade-in on route change */
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    el.classList.remove("page-enter");
+    void el.offsetWidth; // reflow to restart animation
+    el.classList.add("page-enter");
+  }, [pathname]);
+
   return (
     <div className="min-h-screen bg-bg-base text-text-primary">
       <Navbar />
@@ -36,6 +36,7 @@ function AppLayout() {
       {showSidebar && <Sidebar />}
 
       <main
+        ref={mainRef}
         id="main-content"
         tabIndex={-1}
         className={cn(

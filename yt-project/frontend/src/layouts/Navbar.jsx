@@ -121,7 +121,7 @@ function Navbar() {
           ) : (
             !focused && (
               <kbd aria-hidden="true"
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 hidden sm:flex
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 hidden md:flex
                            items-center px-1.5 py-0.5 rounded border border-bg-border
                            text-[10px] font-mono text-text-muted pointer-events-none">
                 /

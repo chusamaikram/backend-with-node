@@ -1,16 +1,15 @@
 import { RouterProvider } from "react-router-dom";
 import router from "@/routes";
 import AuthProvider from "@/providers/AuthProvider";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
-/**
- * App root — provides the router wrapped in AuthProvider.
- * AuthProvider validates the session on boot before any route renders.
- */
 function App() {
   return (
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

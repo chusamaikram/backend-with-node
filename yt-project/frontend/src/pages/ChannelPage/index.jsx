@@ -6,12 +6,14 @@ import ChannelTabs from "./ChannelTabs";
 import VideoGrid from "@/pages/HomePage/VideoGrid";
 import { VideoGridSkeleton, PlaylistCardSkeleton } from "@/components/skeletons";
 import PlaylistCard from "@/pages/PlaylistsPage/PlaylistCard";
+import SearchInput from "@/components/ui/SearchInput";
 import useChannelProfile from "@/hooks/useChannelProfile";
 import { getAllVideos } from "@/api/services/video.service";
 import { getUserPlaylists } from "@/api/services/playlist.service";
 import { getUserTweets } from "@/api/services/tweet.service";
 import useAuthStore from "@/store/authStore";
 import { formatDate } from "@/utils/formatDate";
+import useDebounce from "@/hooks/useDebounce";
 
 /**
  * ChannelPage — public channel profile with lazy-loaded tabs.
@@ -30,6 +32,14 @@ import { formatDate } from "@/utils/formatDate";
 function ChannelPage() {
     const { username } = useParams();
     const [activeTab, setActiveTab] = useState("Videos");
+    const [query, setQuery]         = useState("");
+    const debouncedQuery            = useDebounce(query, 250);
+
+    // Reset search when switching tabs
+    function handleTabChange(tab) {
+        setActiveTab(tab);
+        setQuery("");
+    }
 
     const { user } = useAuthStore();
     const isOwner = user?.username === username;
@@ -83,6 +93,12 @@ function ChannelPage() {
         fetchTab();
     }, [activeTab, channel?._id]);
 
+    // ── Filtered data per tab ─────────────────────────────────────────────
+    const q = debouncedQuery.toLowerCase().trim();
+    const filteredVideos    = q ? videos.filter((v) => v.title.toLowerCase().includes(q))         : videos;
+    const filteredPlaylists = q ? playlists.filter((pl) => pl.name.toLowerCase().includes(q))     : playlists;
+    const filteredTweets    = q ? tweets.filter((t) => t.content.toLowerCase().includes(q))       : tweets;
+
     // ── Error state ───────────────────────────────────────────────────────
     if (error) {
         return (
@@ -109,7 +125,17 @@ function ChannelPage() {
             {/* Only render tabs once channel data is loaded */}
             {!channelLoading && channel && (
                 <>
-                    <ChannelTabs active={activeTab} onChange={setActiveTab} />
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <ChannelTabs active={activeTab} onChange={handleTabChange} />
+                        {!tabLoading && (
+                            <SearchInput
+                                value={query}
+                                onChange={setQuery}
+                                placeholder={`Search ${activeTab.toLowerCase()}…`}
+                                className="w-48 sm:w-60"
+                            />
+                        )}
+                    </div>
 
                     <div className="pt-2">
 
@@ -117,10 +143,10 @@ function ChannelPage() {
                         {activeTab === "Videos" && (
                             tabLoading ? (
                                 <VideoGridSkeleton count={8} />
-                            ) : videos.length === 0 ? (
-                                <EmptyTab message="No videos uploaded yet." />
+                            ) : filteredVideos.length === 0 ? (
+                                <EmptyTab message={q ? `No videos match “${debouncedQuery}”` : "No videos uploaded yet."} />
                             ) : (
-                                <VideoGrid videos={videos} />
+                                <VideoGrid videos={filteredVideos} />
                             )
                         )}
 
@@ -128,14 +154,14 @@ function ChannelPage() {
                         {activeTab === "Playlists" && (
                             tabLoading ? (
                                 <PlaylistCardSkeleton count={6} />
-                            ) : playlists.length === 0 ? (
-                                <EmptyTab message="No playlists yet." />
+                            ) : filteredPlaylists.length === 0 ? (
+                                <EmptyTab message={q ? `No playlists match “${debouncedQuery}”` : "No playlists yet."} />
                             ) : (
                                 <ul
                                     role="list"
                                     className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
                                 >
-                                    {playlists.map((pl) => (
+                                    {filteredPlaylists.map((pl) => (
                                         <li key={pl._id}>
                                             <PlaylistCard playlist={pl} />
                                         </li>
@@ -148,11 +174,11 @@ function ChannelPage() {
                         {activeTab === "Tweets" && (
                             tabLoading ? (
                                 <TweetsSkeleton />
-                            ) : tweets.length === 0 ? (
-                                <EmptyTab message="No tweets yet." />
+                            ) : filteredTweets.length === 0 ? (
+                                <EmptyTab message={q ? `No tweets match “${debouncedQuery}”` : "No tweets yet."} />
                             ) : (
                                 <ul role="list" className="space-y-4 max-w-2xl">
-                                    {tweets.map((tweet) => (
+                                    {filteredTweets.map((tweet) => (
                                         <li
                                             key={tweet._id}
                                             className="bg-bg-elevated rounded-xl p-4 space-y-2"

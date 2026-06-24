@@ -1,21 +1,16 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ThumbsUp, ChevronDown, ChevronUp } from "lucide-react";
+import { ThumbsUp, ChevronDown, ChevronUp, Pencil, BookmarkPlus } from "lucide-react";
 import Avatar from "@/components/ui/Avatar";
 import Button from "@/components/ui/Button";
 import { formatViews } from "@/utils/formatViews";
 import { formatDate } from "@/utils/formatDate";
+import EditVideoModal from "./EditVideoModal";
+import SaveToPlaylistModal from "./SaveToPlaylistModal";
+import useAuthStore from "@/store/authStore";
+import useVideoDetailStore from "@/store/videoDetailStore";
 import toast from "react-hot-toast";
 
-/**
- * VideoInfo — title, stats, like button, channel row, description.
- *
- * All like/subscribe state lives in useVideoDetail (via videoDetailStore).
- * This component is purely presentational — it receives state as props
- * and calls handler functions. No local state for server data.
- *
- * The only local state here is `descExpanded` — purely UI, belongs here.
- */
 function VideoInfo({
     video,
     isLiked,
@@ -26,13 +21,26 @@ function VideoInfo({
     onSubscribe,
     isLoggedIn,
 }) {
-    const [descExpanded, setDescExpanded] = useState(false);
+    const { user } = useAuthStore();
+    const { updateVideo } = useVideoDetailStore();
+    const [descExpanded, setDescExpanded]     = useState(false);
+    const [showEdit, setShowEdit]             = useState(false);
+    const [showPlaylist, setShowPlaylist]     = useState(false);
+    const [likeAnim, setLikeAnim]             = useState(false);
+
+    function triggerLike() {
+        if (!requireAuth("like")) return;
+        setLikeAnim(false);
+        void document.body.offsetWidth; // reflow
+        setLikeAnim(true);
+        onLike();
+    }
+
+    const isOwner = isLoggedIn && user?._id === video.owner?._id;
 
     function requireAuth(action) {
         if (!isLoggedIn) {
-            toast("Sign in to " + action, {
-                icon: "👋",
-            });
+            toast("Sign in to " + action, { icon: "👋" });
             return false;
         }
         return true;
@@ -48,20 +56,49 @@ function VideoInfo({
 
             {/* Stats + actions row */}
             <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-text-muted">
+                <p className="text-xs text-text-muted">
                     {formatViews(video.views)} &middot; {formatDate(video.createdAt)}
                 </p>
 
                 <div className="flex items-center gap-2">
+                    {/* Like button */}
                     <Button
                         variant={isLiked ? "primary" : "secondary"}
                         size="sm"
-                        onClick={() => requireAuth("like") && onLike()}
+                        onClick={triggerLike}
                         aria-label={isLiked ? "Unlike" : "Like"}
+                        className={likeAnim ? "like-pop" : ""}
+                        onAnimationEnd={() => setLikeAnim(false)}
                     >
                         <ThumbsUp size={15} aria-hidden="true" />
                         {likesCount > 0 ? likesCount.toLocaleString() : "Like"}
                     </Button>
+
+                    {/* Save to playlist — logged-in users */}
+                    {isLoggedIn && (
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setShowPlaylist(true)}
+                            aria-label="Save to playlist"
+                        >
+                            <BookmarkPlus size={15} aria-hidden="true" />
+                            Save
+                        </Button>
+                    )}
+
+                    {/* Edit — owner only */}
+                    {isOwner && (
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setShowEdit(true)}
+                            aria-label="Edit video"
+                        >
+                            <Pencil size={14} aria-hidden="true" />
+                            Edit
+                        </Button>
+                    )}
                 </div>
             </div>
 
@@ -87,20 +124,24 @@ function VideoInfo({
                     </div>
                 </Link>
 
-                {/* Subscribe button — same for guests and logged in users */}
-                <Button
-                    variant={isSubscribed ? "secondary" : "primary"}
-                    size="sm"
-                    onClick={() => requireAuth("subscribe") && onSubscribe()}
-                    className="shrink-0"
-                >
-                    {isSubscribed ? "Subscribed ✓" : "Subscribe"}
-                </Button>
+                {/* Hide subscribe button for owner */}
+                {!isOwner && (
+                    <Button
+                        variant={isSubscribed ? "secondary" : "primary"}
+                        size="sm"
+                        onClick={() => requireAuth("subscribe") && onSubscribe()}
+                        className="shrink-0 transition-all duration-200"
+                    >
+                        <span className="transition-all duration-200">
+                            {isSubscribed ? "Subscribed ✓" : "Subscribe"}
+                        </span>
+                    </Button>
+                )}
             </div>
 
             {/* Description */}
             {video.description && (
-                <div className="bg-bg-elevated rounded-xl p-4">
+                <div className="bg-bg-card border border-border-subtle rounded-xl p-4">
                     <p
                         className={`text-sm text-text-secondary leading-relaxed whitespace-pre-line ${
                             !descExpanded ? "line-clamp-3" : ""
@@ -119,6 +160,23 @@ function VideoInfo({
                         )}
                     </button>
                 </div>
+            )}
+
+            {/* Edit modal */}
+            {showEdit && (
+                <EditVideoModal
+                    video={video}
+                    onClose={() => setShowEdit(false)}
+                    onSave={(updated) => updateVideo(updated)}
+                />
+            )}
+
+            {/* Save to playlist modal */}
+            {showPlaylist && (
+                <SaveToPlaylistModal
+                    videoId={video._id}
+                    onClose={() => setShowPlaylist(false)}
+                />
             )}
         </div>
     );

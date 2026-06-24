@@ -92,6 +92,12 @@ const useVideoDetailStore = create((set) => ({
             isSubscribed: false,
             subscribersCount: 0,
         }),
+
+    // Partial update after edit
+    updateVideo: (partial) =>
+        set((state) => ({
+            video: state.video ? { ...state.video, ...partial } : null,
+        })),
 }));
 
 export default useVideoDetailStore;

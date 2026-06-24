@@ -53,7 +53,7 @@ const publishVideo = asyncHandler(async (req, res) => {
         },
         duration: videoFile.duration,
         owner: req.user?._id,
-        isPublished: true
+        ispublished: true
     })
     // get video from db
     const uploadedVideo = await Video.findById(video._id);
@@ -84,7 +84,10 @@ const getAllVideos = asyncHandler(async (req, res) => {
     // ispublished matches the exact field name in video.model.js
     pipeline.push({
         $match: {
-            ispublished: true
+            $or: [
+                { ispublished: true },
+                { isPublished: true }
+            ]
         }
     })
 
@@ -387,14 +390,8 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
 
     const updatedVideo = await Video.findByIdAndUpdate(
         videoId,
-        {
-            $set: {
-                ispublished: !video.ispublished
-            }
-        },
-        {
-            returnDocument: 'after'
-        }
+        { $set: { ispublished: !video.ispublished } },
+        { new: true }
     )
 
     if (!updatedVideo) {

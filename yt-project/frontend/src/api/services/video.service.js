@@ -25,11 +25,15 @@ export const getVideoById = async (videoId, countView = true) => {
 
 /**
  * @param {FormData} formData - fields: title, description, videoFile (file), thumbnail (file)
+ * @param {(progress: number) => void} onProgress - called with 0-100 as upload progresses
  */
-export const uploadVideo = async (formData) => {
+export const uploadVideo = async (formData, onProgress) => {
     const response = await api.post(API_ENDPOINTS.VIDEO.UPLOAD, formData, {
-        headers: {
-            "Content-Type": "multipart/form-data"
+        headers: { "Content-Type": "multipart/form-data" },
+        onUploadProgress: (e) => {
+            if (onProgress && e.total) {
+                onProgress(Math.round((e.loaded * 100) / e.total));
+            }
         },
     });
     return response.data;
