@@ -56,16 +56,7 @@ function useVideoDetail(videoId) {
         const fetchVideo = async () => {
             setLoading(true);
             try {
-                // sessionStorage tracks which videos were viewed this browser session.
-                // On refresh, sessionStorage persists — so the view is not re-counted.
-                // sessionStorage clears when the tab is closed — a new tab = new view.
-                const sessionKey = `viewed_${videoId}`;
-                const alreadyViewed = sessionStorage.getItem(sessionKey);
-
-                const res = await getVideoById(videoId, !alreadyViewed);
-                if (!alreadyViewed) {
-                    sessionStorage.setItem(sessionKey, "1");
-                }
+                const res = await getVideoById(videoId);
                 setVideo(res.data);
             } catch (err) {
                 setError(err?.response?.data?.message ?? "Failed to load video.");

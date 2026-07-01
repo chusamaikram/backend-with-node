@@ -204,7 +204,6 @@ const getAllVideos = asyncHandler(async (req, res) => {
 const getVideoById = asyncHandler(async (req, res) => {
 
     const { videoId } = req.params
-    const { countView } = req.query
 
     if (!isValidObjectId(videoId)) {
         throw new ApiError(400, "Invalid videoId")
@@ -305,18 +304,23 @@ const getVideoById = asyncHandler(async (req, res) => {
     }
 
     if (req.user?._id) {
-        const result = await User.updateOne(
-            { _id: req.user._id },
-            { $addToSet: { watchhistory: videoId } }
-        )
+        const alreadyWatched = await User.findOne({
+            _id: req.user._id,
+            watchhistory: videoId
+        }).select("_id")
 
-        // only increment if frontend says to count this view
-        if (countView === "true" && result.nModified > 0) {
-            await Video.findByIdAndUpdate(videoId, { $inc: { views: 1 } })
+        if (!alreadyWatched) {
+            await User.updateOne(
+                { _id: req.user._id },
+                { $addToSet: { watchhistory: videoId } }
+            )
+            const updated = await Video.findByIdAndUpdate(
+                videoId,
+                { $inc: { views: 1 } },
+                { new: true }
+            )
+            video[0].views = updated.views
         }
-    } else if (countView === "true") {
-        // guest — increment only when countView is true
-        await Video.findByIdAndUpdate(videoId, { $inc: { views: 1 } })
     }
 
     return res

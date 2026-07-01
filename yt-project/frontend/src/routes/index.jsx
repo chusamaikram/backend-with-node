@@ -21,6 +21,8 @@ import UploadVideoPage    from "@/pages/UploadVideoPage";
 import DashboardPage      from "@/pages/DashboardPage";
 import SettingsPage       from "@/pages/SettingsPage";
 import NotFoundPage       from "@/pages/NotFoundPage";
+import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
+import ResetPasswordPage  from "@/pages/ResetPasswordPage";
 
 const router = createBrowserRouter([
   {
@@ -41,6 +43,14 @@ const router = createBrowserRouter([
       {
         path: "register",
         element: <GuestRoute><RegisterPage /></GuestRoute>,
+      },
+      {
+        path: "forgot-password",
+        element: <GuestRoute><ForgotPasswordPage /></GuestRoute>,
+      },
+      {
+        path: "reset-password/:token",
+        element: <GuestRoute><ResetPasswordPage /></GuestRoute>,
       },
 
       // ── Protected (redirect logged-out users to /login) ─

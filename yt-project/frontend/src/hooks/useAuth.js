@@ -8,6 +8,8 @@ import {
     registerUser,
     logoutUser,
     changePassword,
+    forgotPassword as forgotPasswordService,
+    resetPassword as resetPasswordService,
 } from "@/api/services/user.service";
 
 /**
@@ -108,7 +110,36 @@ function useAuth() {
         }
     }
 
-    return { login, register, logout, updatePassword, loading };
+    // ── Forgot Password ──────────────────────────────────────────────────────
+    async function forgotPassword(email) {
+        setLoading(true);
+        try {
+            await forgotPasswordService(email);
+            toast.success("Reset link sent! Check your inbox.");
+            return true;
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Failed to send reset email."));
+            return false;
+        } finally {
+            if (isMounted.current) setLoading(false);
+        }
+    }
+
+    // ── Reset Password ───────────────────────────────────────────────────────
+    async function resetPassword(token, newPassword) {
+        setLoading(true);
+        try {
+            await resetPasswordService(token, newPassword);
+            toast.success("Password reset! You can now sign in.");
+            navigate("/login", { replace: true });
+        } catch (err) {
+            toast.error(getErrorMessage(err, "Reset link is invalid or expired."));
+        } finally {
+            if (isMounted.current) setLoading(false);
+        }
+    }
+
+    return { login, register, logout, updatePassword, forgotPassword, resetPassword, loading };
 }
 
 export default useAuth;

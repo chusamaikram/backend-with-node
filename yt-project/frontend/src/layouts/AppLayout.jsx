@@ -6,32 +6,35 @@ import Sidebar from "./Sidebar";
 import useUiStore from "@/store/uiStore";
 import { cn } from "@/utils/cn";
 
-const NO_SIDEBAR = ["/login", "/register"];
+const AUTH_ROUTES = ["/login", "/register", "/forgot-password"];
+const isAuthRoute = (pathname) =>
+  AUTH_ROUTES.includes(pathname) || pathname.startsWith("/reset-password/");
 
 function AppLayout() {
   const { pathname } = useLocation();
   const { sidebarOpen, setSidebarOpen } = useUiStore();
   const mainRef = useRef(null);
 
-  const showSidebar = !NO_SIDEBAR.includes(pathname);
+  const authRoute = isAuthRoute(pathname);
+  const showSidebar = !authRoute;
 
-  /* Auto-close sidebar on mobile when navigating */
+  /* Close sidebar overlay when navigating on mobile/tablet */
   useEffect(() => {
     if (window.innerWidth < 1024) setSidebarOpen(false);
   }, [pathname, setSidebarOpen]);
 
-  /* Page transition — re-trigger fade-in on route change */
+  /* Page transition */
   useEffect(() => {
     const el = mainRef.current;
     if (!el) return;
     el.classList.remove("page-enter");
-    void el.offsetWidth; // reflow to restart animation
+    void el.offsetWidth;
     el.classList.add("page-enter");
   }, [pathname]);
 
   return (
     <div className="min-h-screen bg-bg-base text-text-primary">
-      <Navbar />
+      {!authRoute && <Navbar />}
 
       {showSidebar && <Sidebar />}
 
@@ -40,12 +43,15 @@ function AppLayout() {
         id="main-content"
         tabIndex={-1}
         className={cn(
-          "pt-14 min-h-screen transition-[padding-left] duration-200 ease-in-out",
-          showSidebar && (
-            sidebarOpen
-              ? "lg:pl-(--sidebar-expanded)"
-              : "lg:pl-(--sidebar-collapsed)"
-          )
+          "min-h-screen transition-[padding-left] duration-200 ease-in-out",
+          !authRoute && "pt-14",
+          showSidebar && [
+            // mobile: no offset (sidebar hidden)
+            // tablet: offset by icon-strip
+            "sm:pl-(--sidebar-collapsed)",
+            // desktop: always offset by full sidebar
+            "lg:pl-(--sidebar-expanded)",
+          ]
         )}
       >
         <Outlet />

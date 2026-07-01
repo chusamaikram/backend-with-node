@@ -10,6 +10,7 @@ export const registerUser = async (formData) => {
         headers: {
             "Content-Type": "multipart/form-data"
         },
+        timeout: 0, // disable timeout for file uploads — Cloudinary can be slow
     });
     return response.data;
 };
@@ -55,6 +56,7 @@ export const updateAvatar = async (formData) => {
         headers: {
             "Content-Type": "multipart/form-data"
         },
+        timeout: 0,
     });
     return response.data;
 };
@@ -64,6 +66,7 @@ export const updateCoverImage = async (formData) => {
         headers: {
             "Content-Type": "multipart/form-data"
         },
+        timeout: 0,
     });
     return response.data;
 };
@@ -78,5 +81,15 @@ export const getChannelProfile = async (username) => {
 
 export const getWatchHistory = async () => {
     const response = await api.get(API_ENDPOINTS.USER.WATCH_HISTORY);
+    return response.data;
+};
+
+export const forgotPassword = async (email) => {
+    const response = await api.post(API_ENDPOINTS.USER.FORGOT_PASSWORD, { email });
+    return response.data;
+};
+
+export const resetPassword = async (token, newPassword) => {
+    const response = await api.post(API_ENDPOINTS.USER.RESET_PASSWORD(token), { newPassword });
     return response.data;
 };

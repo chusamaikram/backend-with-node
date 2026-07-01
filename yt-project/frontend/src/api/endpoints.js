@@ -36,6 +36,8 @@ export const API_ENDPOINTS = {
         UPDATE_AVATAR: "/users/avatar", // PATCH multipart: avatar
         UPDATE_COVER: "/users/cover-image", // PATCH multipart: coverImage
         WATCH_HISTORY: "/users/watch-history", // GET
+        FORGOT_PASSWORD: "/users/forgot-password", // POST { email }
+        RESET_PASSWORD: (token) => `/users/reset-password/${token}`, // POST { newPassword }
 
         // Dynamic
         CHANNEL_PROFILE: (username) => `/users/c/${username}`, // GET  channel + subscriber counts

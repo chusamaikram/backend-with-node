@@ -16,10 +16,8 @@ export const getAllVideos = async (params = {}) => {
 /**
  * @param {string} videoId
  */
-export const getVideoById = async (videoId, countView = true) => {
-    const response = await api.get(API_ENDPOINTS.VIDEO.GET_BY_ID(videoId), {
-        params: { countView }
-    });
+export const getVideoById = async (videoId) => {
+    const response = await api.get(API_ENDPOINTS.VIDEO.GET_BY_ID(videoId));
     return response.data;
 };
 

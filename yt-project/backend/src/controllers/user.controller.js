@@ -1,17 +1,12 @@
 import { asyncHandler} from "../utils/asyncHandler.js";
 import { ApiError} from "../utils/ApiError.js";
-import {
-    User
-} from "../models/user.model.js";
-import {
-    uploadToCloudinary,
-    deleteOnCloudinary
-} from "../utils/Cloudinary.js"
-import {
-    ApiResponse
-} from "../utils/ApiResponse.js"
+import { User } from "../models/user.model.js";
+import { uploadToCloudinary, deleteOnCloudinary } from "../utils/Cloudinary.js"
+import { ApiResponse } from "../utils/ApiResponse.js"
+import { sendEmail } from "../utils/sendEmail.js"
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose";
+import crypto from "crypto"
 
 //method for generate access and refresh token 
 
@@ -106,6 +101,24 @@ const registerUser = asyncHandler(async (req, res) => {
     if (!createdUser) {
         throw new ApiError(500, "User registration failed")
     }
+
+    // send email verification
+    const verifyToken = createdUser.emailVerificationToken
+        ? undefined // already set — shouldn't happen but guard anyway
+        : null
+
+    // re-fetch the full doc (select excluded _id fields)
+    const userDoc = await User.findById(user._id)
+    const emailToken = userDoc.generateEmailVerificationToken()
+    await userDoc.save({ validateBeforeSave: false })
+
+    const verifyURL = `${process.env.CLIENT_URL}/verify-email/${emailToken}`
+    await sendEmail({
+        to: userDoc.email,
+        subject: "Verify your email — VideoTube",
+        html: `<p>Hi ${userDoc.fullname},</p>
+               <p>Click <a href="${verifyURL}">here</a> to verify your email. Link expires in 24 hours.</p>`,
+    })
 
     // generate tokens so the user is immediately logged in after register
     const {
@@ -550,6 +563,52 @@ const getWatchHistory = asyncHandler(async (req, res) => {
 
 
 
+const forgotPassword = asyncHandler(async (req, res) => {
+    const { email } = req.body
+
+    if (!email) throw new ApiError(400, "Email is required")
+
+    const user = await User.findOne({ email })
+    if (!user) throw new ApiError(404, "User not found")
+
+    const token = user.generateForgotPasswordToken()
+    await user.save({ validateBeforeSave: false })
+
+    const resetURL = `${process.env.CLIENT_URL}/reset-password/${token}`
+
+    await sendEmail({
+        to: user.email,
+        subject: "Reset your password",
+        html: `<p>Click <a href="${resetURL}">here</a> to reset your password. Link expires in 15 minutes.</p>`,
+    })
+
+    return res.status(200).json(new ApiResponse(200, {}, "Password reset email sent"))
+})
+
+const resetPassword = asyncHandler(async (req, res) => {
+    const { token } = req.params
+    const { newPassword } = req.body
+
+    if (!newPassword) throw new ApiError(400, "New password is required")
+
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex")
+
+    const user = await User.findOne({
+        forgotPasswordToken: hashedToken,
+        forgotPasswordExpiry: { $gt: Date.now() },
+    })
+
+    if (!user) throw new ApiError(400, "Token is invalid or expired")
+
+    user.password = newPassword
+    user.forgotPasswordToken = undefined
+    user.forgotPasswordExpiry = undefined
+    await user.save({ validateBeforeSave: false })
+
+    return res.status(200).json(new ApiResponse(200, {}, "Password reset successfully"))
+})
+
+
 export {
     registerUser,
     loginUser,
@@ -561,5 +620,7 @@ export {
     updateUserAvatar,
     updateUserCoverImage,
     getUserChannelProfile,
-    getWatchHistory
+    getWatchHistory,
+    forgotPassword,
+    resetPassword
 }

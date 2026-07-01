@@ -2,14 +2,8 @@ import {
     create
 } from "zustand";
 
-/**
- * UI store — controls global interface state like sidebar visibility
- * and shared modals. Not persisted; resets on every page load.
- */
 const useUiStore = create((set) => ({
-    // ── Sidebar ──────────────────────────────────────────────
-    /** Whether the sidebar is expanded (desktop) or open (mobile) */
-    sidebarOpen: true,
+    sidebarOpen: false,
 
     toggleSidebar: () =>
         set((state) => ({

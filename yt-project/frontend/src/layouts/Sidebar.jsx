@@ -11,31 +11,42 @@ import { cn } from "@/utils/cn";
 
 
 const NAV_ITEMS = [
-  { label: "Home",           href: "/",              icon: Home       },
-  { label: "Subscriptions",  href: "/subscriptions", icon: PlayCircle },
+  { label: "Home",          href: "/",              icon: Home       },
+  { label: "Subscriptions", href: "/subscriptions", icon: PlayCircle },
   { type: "divider" },
-  { label: "Liked Videos",   href: "/liked",         icon: Heart      },
-  { label: "Watch History",  href: "/history",       icon: Clock      },
+  { label: "Liked Videos",  href: "/liked",         icon: Heart      },
+  { label: "Watch History", href: "/history",       icon: Clock      },
   { label: "Tweets",        href: "/tweets",        icon: Feather    },
-  { label: "Playlists",      href: "/playlists",     icon: ListVideo  },
+  { label: "Playlists",     href: "/playlists",     icon: ListVideo  },
   { type: "divider" },
-  { label: "Dashboard",      href: "/dashboard",     icon: BarChart2  },
-  { label: "Settings",       href: "/settings",      icon: Settings   },
+  { label: "Dashboard",     href: "/dashboard",     icon: BarChart2  },
+  { label: "Settings",      href: "/settings",      icon: Settings   },
 ];
 
 /**
- * Sidebar — fixed below the navbar.
+ * Sidebar behaviour (pure Tailwind, no JS breakpoint):
  *
- * Desktop: 240px (expanded) or 72px (collapsed, icon-only).
- * Mobile:  full overlay panel, dismissed by backdrop click.
+ *  < 576px  (mobile)  — w-0 by default. sidebarOpen → full overlay
+ *  576–1023px (tablet) — w-(--sidebar-collapsed) icon-only by default.
+ *                        sidebarOpen → w-(--sidebar-expanded) overlay
+ *  ≥ 1024px (desktop) — w-(--sidebar-expanded) always fully visible.
+ *                        sidebarOpen → no effect on width (already full)
  */
 function Sidebar() {
   const { isLoggedIn, user } = useAuthStore();
   const { sidebarOpen, setSidebarOpen } = useUiStore();
 
+  // On mobile/tablet the open sidebar is an overlay — close on nav click
+  const closeOverlay = () => {
+    if (window.innerWidth < 1024) setSidebarOpen(false);
+  };
+
+  // Labels visible: on desktop always, on mobile/tablet only when toggled open
+  const labelsVisible = sidebarOpen;
+
   return (
     <>
-      {/* Mobile backdrop */}
+      {/* Backdrop — only on mobile/tablet when open */}
       {sidebarOpen && (
         <div
           aria-hidden="true"
@@ -50,9 +61,10 @@ function Sidebar() {
           "fixed top-14 left-0 bottom-0 z-40 flex flex-col",
           "bg-bg-base border-r border-bg-border",
           "transition-[width] duration-200 ease-in-out overflow-hidden",
-          sidebarOpen
-            ? "w-(--sidebar-expanded)"
-            : "w-0 lg:w-(--sidebar-collapsed)"
+          // default widths per breakpoint (no toggle)
+          "w-0 sm:w-(--sidebar-collapsed) lg:w-(--sidebar-expanded)",
+          // when toggled open: override to expanded on mobile & tablet only
+          sidebarOpen && "w-(--sidebar-expanded) lg:w-(--sidebar-expanded)"
         )}
       >
         {/* ── Nav links ─────────────────────────────────── */}
@@ -68,18 +80,23 @@ function Sidebar() {
               }
               return (
                 <li key={item.href}>
-                  <NavItem item={item} expanded={sidebarOpen} />
+                  <NavItem
+                    item={item}
+                    labelsVisible={labelsVisible}
+                    onClick={closeOverlay}
+                  />
                 </li>
               );
             })}
           </ul>
         </nav>
 
-        {/* ── Bottom user strip (logged-in + expanded only) ─ */}
-        {isLoggedIn && sidebarOpen && (
+        {/* ── Bottom user strip (logged-in + labels visible only) ─ */}
+        {isLoggedIn && labelsVisible && (
           <div className="shrink-0 border-t border-bg-border p-3">
             <NavLink
               to={`/channel/${user?.username}`}
+              onClick={closeOverlay}
               className="flex items-center gap-3 rounded-lg p-2
                          hover:bg-bg-elevated transition-colors duration-150"
             >
@@ -105,8 +122,8 @@ function Sidebar() {
   );
 }
 
-/* ── Individual nav link ────────────────────────────────────── */
-function NavItem({ item, expanded }) {
+/* ── Individual nav link ─────────────────────────────────────── */
+function NavItem({ item, labelsVisible, onClick }) {
   const Icon = item.icon;
 
   return (
@@ -114,7 +131,8 @@ function NavItem({ item, expanded }) {
       to={item.href}
       end={item.href === "/"}
       aria-label={item.label}
-      title={!expanded ? item.label : undefined}
+      title={!labelsVisible ? item.label : undefined}
+      onClick={onClick}
       className={({ isActive }) =>
         cn(
           "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
@@ -129,7 +147,10 @@ function NavItem({ item, expanded }) {
       <span
         className={cn(
           "transition-opacity duration-150",
-          expanded ? "opacity-100" : "opacity-0 pointer-events-none"
+          // on desktop labels always visible, on smaller screens only when toggled
+          "opacity-0 pointer-events-none",
+          "lg:opacity-100 lg:pointer-events-auto",
+          labelsVisible && "opacity-100 pointer-events-auto"
         )}
       >
         {item.label}
